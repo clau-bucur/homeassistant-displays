@@ -43,6 +43,8 @@ SERVICE_SCREENSAVER_STOP = 'screensaver_stop'
 SERVICE_SET_SCREENSAVER_BRIGHTNESS = 'set_screensaver_brightness'
 SERVICE_SOUND_START = 'sound_play'
 SERVICE_SOUND_STOP = 'sound_stop'
+SERVICE_DAYDREAM_START = 'daydream_start'
+SERVICE_DAYDREAM_STOP = 'daydream_stop'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
@@ -80,6 +82,12 @@ SCHEMA_SERVICE_SET_SCREENSAVER_BRIGHTNESS = vol.Schema({
             vol.All(int, vol.Range(min=0, max=255))
         )
 })
+SCHEMA_SERVICE_DAYDREAM_START = vol.Schema({
+    ATTR_ENTITY_ID: cv.entity_ids,
+})
+SCHEMA_SERVICE_DAYDREAM_STOP = vol.Schema({
+    ATTR_ENTITY_ID: cv.entity_ids,
+})
 
 
 def setup_platform(hass, config, add_devices, discovery_info=None):                   # pylint: disable=unused-argument
@@ -105,6 +113,10 @@ def setup_platform(hass, config, add_devices, discovery_info=None):             
                 device.sound_start(call.data[ATTR_URL])
             elif call.service == SERVICE_SOUND_STOP:
                 device.sound_stop()
+            elif call.service == SERVICE_DAYDREAM_START:
+                device.turn_daydream_on()
+            elif call.service == SERVICE_DAYDREAM_STOP:
+                device.turn_daydream_off()
 
     _LOGGER.info("Setting up FullyKioskDevice for %s at %s:%s",
                  config.get(CONF_NAME, DEFAULT_NAME),
@@ -147,6 +159,14 @@ def setup_platform(hass, config, add_devices, discovery_info=None):             
     hass.services.register(
         DOMAIN, SERVICE_SOUND_STOP, service_handler,
         schema=SCHEMA_SERVICE_SOUND_STOP)
+
+    hass.services.register(
+        DOMAIN, SERVICE_DAYDREAM_START, service_handler,
+        schema=SCHEMA_SERVICE_DAYDREAM_START)
+
+    hass.services.register(
+        DOMAIN, SERVICE_DAYDREAM_STOP, service_handler,
+        schema=SCHEMA_SERVICE_DAYDREAM_STOP)
 
 class FullyKioskDevice(DisplayDevice):
     def __init__(self, name, host, port, password):
@@ -206,6 +226,12 @@ class FullyKioskDevice(DisplayDevice):
     def tts(self, message, locale):
         self._send_command(command='textToSpeech', text=message, locale=locale)
 
+    def turn_daydream_on(self):
+        self._send_command(command='startDaydream')
+
+    def turn_daydream_off(self):
+        self._send_command(command='stopDaydream')
+
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         try:
@@ -217,12 +243,12 @@ class FullyKioskDevice(DisplayDevice):
             _LOGGER.error(data['statustext'])
             return False
 
-        self._state = (STATE_OFF, STATE_ON)[data['isScreenOn']]
+        self._state = (STATE_OFF, STATE_ON)[data['screenOn']]
         self._attributes = {
             'manufacturer': data['deviceManufacturer'],
             'model': data['deviceModel'],
             'device_id': data['deviceID'],
-            'mac_address': data['mac'],
+            'mac_address': data['Mac'],
             'version': data['appVersionName'],
             'page': data['currentPage'],
             'battery_charging': data['plugged'],
@@ -231,7 +257,7 @@ class FullyKioskDevice(DisplayDevice):
             'brightness': data['screenBrightness'],
             'kiosk_mode': data['kioskMode'],
             'maintenance_mode': data['maintenanceMode'],
-            'screensaver_on': (data['currentFragment'] == 'screensaver'),
+            'screensaver_on': data['isInScreensaver'],
         }
         return True
 

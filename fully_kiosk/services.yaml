@@ -58,3 +58,17 @@ sound_stop:
     entity_id:
       description: 'Name of the Fully Kiosk Browser device'
       example: 'display.kitchen_wall_pad'
+
+daydream_start:
+  description: 'Start the Fully Kiosk Browser device daydream'
+  fields:
+    entity_id:
+      description: 'Name of the Fully Kiosk Browser device'
+      example: 'display.kitchen_wall_pad'
+
+daydream_stop:
+  description: 'Stop the Fully Kiosk Browser device daydream'
+  fields:
+    entity_id:
+      description: 'Name of the Fully Kiosk Browser device'
+      example: 'display.kitchen_wall_pad'
